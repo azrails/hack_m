@@ -1,7 +1,13 @@
 import numpy as np
+import parser as par
 
 alpha = np.array([0.005, 0.2, 0.7, 1.25, 0.7, 1.5])
+q = 1.05
 
+#t_f - текущий год, t_n - год последней диагностики (берутся с таблицы)
+roadbed_type =
+road_category =
+road_climatic zone =
 delta_t = t_f - t_n
 
 
@@ -16,6 +22,11 @@ def get_gamma(roadbed_type):
         print("error at formulas.get_gamma")
 
 
+def get_omega(roadbed_type, road_climatic_zone):
+    omegas = ((1.3, 1.39, 1.00), (1.14, 1.17, 1.00), (1.00, 1.00, 1.00), (0.89, 0.86, 1.00), (0.79, 0.74, 1.00))
+    return omegas[road_climatic_zone][roadbed_type]
+
+
 def get_T_0_K_H(roadbed_type, road_category, road_climatic_zone):
     T_0es = (((12, 12, 5), (12, 12, 5), (12, 12, 5), (12, 10, 5), (12, 10, 5)),
              ((14, 12, 5), (12, 12, 5), (12, 12, 5), (12, 10, 5), (12, 10, 5)),
@@ -23,7 +34,28 @@ def get_T_0_K_H(roadbed_type, road_category, road_climatic_zone):
     K_Hes = (((0.98, 0.86, 0.82), (0.95, 0.86, 0.82), (0.92, 0.86, 0.82), (0.85, 0.85, 0.82), (0.85, 0.82, 0.65)),
              ((0.95, 0.85, 0.80), (0.92, 0.85, 0.80), (0.90, 0.85, 0.80), (0.84, 0.84, 0.80), (0.84, 0.80, 0.60)),
              ((0.88, 0.84, 0.77), (0.88, 0.84, 0.77), (0.85, 0.84, 0.77), (0.83, 0.82, 0.77), (0.83, 0.79, 0.58)))
-    return T_0es[road_climatic_zone][road_category][roadbed_type], K_Hes[road_climatic_zone][road_category][roadbed_type]
+    return T_0es[road_climatic_zone][road_category][roadbed_type], K_Hes[road_climatic_zone][road_category][
+        roadbed_type]
+
+def get_K_cu(roadbed_type, road_climatic_zone):
+    keys = ((1.54, 1.42, 1.35), (1.38, 1.34, 1.28), (1.0, 1.0, 1.0))
+    return keys[roadbed_type][road_climatic_zone]
+
+def get_K_pr(road_category, roadbed_type):
+    if roadbed_type == 1:
+        if road_category < 3:
+            return 1.00
+        else:
+            return 0.94
+    else:
+        return 0.77
+
+
+def get_K_reg(road_climatic_zone):
+    if road_climatic_zone == 5:
+        return 0.85
+    else:
+        return 1.00
 
 
 # расчет 1
@@ -43,6 +75,11 @@ def f_n(a):
 
 def T_oct(q, X, gamma, omega, N_fp):
     return 1 / (np.log10(q)) * np.log10(10 ** X * (q - 1) / (gamma * omega * N_fp * q) + 1)
+
+
+
+def X_i(K_H):
+    0.96/(1 - K_H)**0.128
 
 
 def X(E_i):

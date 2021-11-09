@@ -3,7 +3,6 @@ import pandas as pd
 
 
 #существует 7 разных типов экселей и 10 дорог, называются по типу road_parcerType3(1) для третьего типа первой дороги:
-#СУКА, ВО ВТОРОЙ ДОРОГЕ НЕТ 5 ТИПА, НЕ ВЫЗЫВАЙТЕ, ИНАЧЕ ВСЕ НАЕБНЕТСЯ
 
 # Категории дорог
 # Кострукции дорожной одежды
@@ -45,9 +44,11 @@ def road_parserType4(road):
 
 def road_parserType5(road):
     road += r"/11_Ведомость ширины проезжей части.xlsx"
-
-    df = pd.read_excel(r'{}'.format(road))
-    return df
+    if x == 2:
+        print('no fifth type in second road found')
+    else:
+        df = pd.read_excel(r'{}'.format(road))
+        return df
 
 def road_parserType6(road):
     road += r"/19_Ведомость среднегодовой интенсивности и состава движения.xlsx"
