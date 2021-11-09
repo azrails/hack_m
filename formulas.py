@@ -8,7 +8,29 @@ q = 1.05
 roadbed_type =
 road_category =
 road_climatic zone =
+#число полос
+strip_count =
 delta_t = t_f - t_n
+
+#запарсить средннее значение машин в сутки
+def get_N_obsh(spreadsheet_19):
+    car_data = np.zeros(6)
+    car_data[0] = np.mean(np.array(spreadsheet_19.loc[:, 'Грузовые автомобили легкие']))
+    car_data[1] = np.mean(np.array(spreadsheet_19.loc[:, 'Грузовые автомобили средние']))
+    - np.mean(np.array(spreadsheet_19.loc[:, 4]))
+    car_data[2] = -np.mean(np.array(spreadsheet_19.loc[:, 'Грузовые автомобили тяжелые']))
+    + np.mean(np.array(spreadsheet_19.loc[:, 6]))
+    car_data[3] = np.mean(np.array(spreadsheet_19.loc[:, 'Грузовые автомобили сверхтяжелые']))
+    - np.mean(np.array(spreadsheet_19.loc[:, 8]))
+    car_data[4] = np.mean(np.array(spreadsheet_19.loc[:, 'Автобусы']))
+    car_data[5] = np.mean(np.array(spreadsheet_19.loc[:, 4])) + np.mean(np.array(spreadsheet_19.loc[:, 4]))
+    + np.mean(np.array(spreadsheet_19.loc[:, 'Грузовые автомобили тяжелые']))
+    return car_data
+
+
+#запарсить массив среднего значения по типам
+def get_N_j(spreadsheet_19):
+    return np.mean(np.array(spreadsheet_19.loc[:, 11])) - np.mean(np.array(spreadsheet_19.loc[:, 10]))
 
 
 def get_gamma(roadbed_type):
@@ -60,20 +82,20 @@ def get_K_reg(road_climatic_zone):
 
 # расчет 1
 
-def f_n(a):
+def get_f_n(strip_count):
     r = 0.3
-    if a == 1:
+    if strip_count == 1:
         r = 1
-    elif a == 2:
+    elif strip_count == 2:
         r = 0.55
-    elif a == 3:
+    elif strip_count == 3:
         r = 0.5
-    elif a == 4 or a == 5:
+    elif strip_count == 4 or a == 5:
         r = 0.35
     return r
 
 
-def T_oct(q, X, gamma, omega, N_fp):
+def T_ost(q, X, gamma, omega, N_fp):
     return 1 / (np.log10(q)) * np.log10(10 ** X * (q - 1) / (gamma * omega * N_fp * q) + 1)
 
 
@@ -95,8 +117,7 @@ def Formula_1_01(T_ost, delta_t):
     return T_ost - delta_t
 
 
-# K_z
-def Formula_1_04(N):
+def get_K_z(N):
     if N >= 1000:
         return 0.0000175 * N + 0.98
     elif N > 0:
@@ -105,14 +126,12 @@ def Formula_1_04(N):
         return 0.98 - 6.9
 
 
-# N
-def Formula_1_05(N_fp, q, delta_t):
+def get_N(N_fp, q, delta_t):
     return N_fp * q ** delta_t
 
 
-# N_fp
-def Formula_1_08(N_obsh_n, f_n, alpha, P):
-    return N_obsh_n * f_n * np.sum(alpha * P)
+def get_N_fp(N_obsh_n, strip_count, alpha, P):
+    return N_obsh_n * get_f_n(strip_count) * np.sum(alpha * P)
 
 
 # Ебейшая формула из большой таблицы
@@ -130,3 +149,29 @@ def Giga_Formula(T_ost, delta_t, K_pr, K_reg, K_z, K_cu, X_i, gamma, omega, N_fp
             E_tr = (E_i * K_pr * K_reg * K_z * K_cu) / X_i
 
     return E_f, E_tr
+
+
+def calculate_T_ost(q, roadbed_type, road_category, road_climatic_zone, strip_count, spreadsheet_19, alpha, delta_t):
+    omega = get_omega(roadbed_type, road_climatic_zone)
+    gamma = get_gamma(roadbed_type)
+    N_j = get_N_j(spreadsheet_19)
+    N_obsh = get_N_obsh(spreadsheet_19)
+    P = N_j/N_obsh
+    N_fp = get_N_fp(N_obsh, strip_count, alpha, P)
+    N = get_N(N_fp, q, delta_t)
+    K_pr = get_K_pr(road_category, roadbed_type)
+    K_Cu = get_K_cu(roadbed_type, road_climatic_zone)
+    K_reg = get_K_reg(road_climatic_zone)
+    K_z = get_K_z(N)
+
+    result = T_ost(q, X, gamma, omega, N_fp)
+
+
+#
+#
+#
+#
+#X_i
+#E_i
+#X
+#T_ost
