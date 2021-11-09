@@ -68,4 +68,3 @@ def road_parserType7(x):
 
     df = pd.read_excel(r'{}'.format(road))
     return df
-print(road_parserType5(2))
