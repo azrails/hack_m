@@ -47,9 +47,11 @@ def road_parserType5(x):
     road = r"hack/Дорога "
     road += str(x)
     road += r"/11_Ведомость ширины проезжей части.xlsx"
-
-    df = pd.read_excel(r'{}'.format(road))
-    return df
+    if x == 2:
+        print('no fifth type in second road found')
+    else:
+        df = pd.read_excel(r'{}'.format(road))
+        return df
 
 def road_parserType6(x):
     road = r"hack/Дорога "
@@ -66,3 +68,4 @@ def road_parserType7(x):
 
     df = pd.read_excel(r'{}'.format(road))
     return df
+print(road_parserType5(2))
