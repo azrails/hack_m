@@ -1,36 +1,76 @@
 import numpy as np
+import pandas as pd
 import parser as par
+import datetime
 
 alpha = np.array([0.005, 0.2, 0.7, 1.25, 0.7, 1.5])
 q = 1.05
 
-#t_f - текущий год, t_n - год последней диагностики (берутся с таблицы)
-roadbed_type =
-road_category =
-road_climatic zone =
-#число полос
-strip_count =
-delta_t = t_f - t_n
 
-#запарсить средннее значение машин в сутки
-def get_N_obsh(spreadsheet_19):
-    car_data = np.zeros(6)
-    car_data[0] = np.mean(np.array(spreadsheet_19.loc[:, 'Грузовые автомобили легкие']))
-    car_data[1] = np.mean(np.array(spreadsheet_19.loc[:, 'Грузовые автомобили средние']))
-    - np.mean(np.array(spreadsheet_19.loc[:, 4]))
-    car_data[2] = -np.mean(np.array(spreadsheet_19.loc[:, 'Грузовые автомобили тяжелые']))
-    + np.mean(np.array(spreadsheet_19.loc[:, 6]))
-    car_data[3] = np.mean(np.array(spreadsheet_19.loc[:, 'Грузовые автомобили сверхтяжелые']))
-    - np.mean(np.array(spreadsheet_19.loc[:, 8]))
-    car_data[4] = np.mean(np.array(spreadsheet_19.loc[:, 'Автобусы']))
-    car_data[5] = np.mean(np.array(spreadsheet_19.loc[:, 4])) + np.mean(np.array(spreadsheet_19.loc[:, 4]))
-    + np.mean(np.array(spreadsheet_19.loc[:, 'Грузовые автомобили тяжелые']))
-    return car_data
+def segmenter(segs, lens, points, data, write):
+    counts = 0
+    for i in range(len(segs)):
+        if points[counts] - segs[i] <= lens[i]:
+            write[i] = data[counts]
+        else:
+            counts += 1
+            write[i] = data[counts]
+
+def get_data(df1, df2, df5, df9, df11, df19, df_not_numbered):
+    alpha = np.array([0.005, 0.2, 0.7, 1.25, 0.7, 1.5])
+    _t_p = int(df9.iloc[0, 9])
+    _t_f = int(datetime.datetime.now().year)
+    lens = np.array(len(df1), len(df2), len(df5), len(df9), len(df11), len(df19), len(df_not_numbered))
+    names = ("df1", "df2", "df5", "df9", "df11", "df19", "df_not_numbered")
+    string1 = names[np.argmax(lens)] + ".iloc[:, 0:3].to_numpy()"
+    segments_with_meters = eval(string1)
+    # в segments хранятся 0 - начало участка в км 1 - длина в км 2 - road category 3 - strip_count
+    # 4 - climatic zore 5 - roadbed 6 - E_fp 7 -  alpha_prod_P 8 - N_obsh
+    # FIXME какой индекс в np.shape дает количество строк в таблице
+    segments = np.zeros((np.shape(segments_with_meters)[kakoyto], 8))
+    segments[0] = segments_with_meters[0]+segments_with_meters[1]*0.001
+    segments[1] = -segments[0] + segments_with_meters[2]+segments_with_meters[3]*0.001-segments[0]
+
+    category = df1.iloc[:, 4].to_numpy()
+    strips = df1.iloc[:, 6].to_numpy()
+    df1_points = df1.iloc[:, 0].to_numpy() + df1.iloc[:, 1].to_numpy()*0.001
+    segmenter(segments[0], segments[1], df1_points, category, segments[2])
+    segmenter(segments[0], segments[1], df1_points, strips, segments[3])
+
+    climatic_zone = df5.iloc[:, 4].to_numpy()
+    df5_points = df5.iloc[:, 0].to_numpy() + df5.iloc[:, 1].to_numpy() * 0.001
+    segmenter(segments[0], segments[1], df5_points, climatic_zone, segments[4])
+
+    roadbed = df_not_numbered.iloc[:, 4].to_numpy()
+    E_modula = df_not_numbered.iloc[:, 6].to_numpy()
+    df_not_numbered_points = df_not_numbered.iloc[:, 0].to_numpy() + df_not_numbered.iloc[:, 1].to_numpy()*0.001
+    segmenter(segments[0], segments[1], df_not_numbered_points, roadbed, segments[5])
+    segmenter(segments[0], segments[1], df_not_numbered_points, E_modula, segments[6])
+
+    df19_points = df19.iloc[:, 0].to_numpy() + df19.iloc[:, 1].to_numpy() * 0.001
+    A_P_P, obsh = get_alpha_prod_P(df19, alpha)
+    segmenter(segments[0], segments[1], df19_points, A_P_P, segments[7])
+    segmenter(segments[0], segments[1], df19_points, obsh, segments[8])
+    return segments, _t_f, _t_p
 
 
-#запарсить массив среднего значения по типам
-def get_N_j(spreadsheet_19):
-    return np.mean(np.array(spreadsheet_19.loc[:, 11])) - np.mean(np.array(spreadsheet_19.loc[:, 10]))
+def get_alpha_prod_P(df_19, alph):
+    car_data = []
+    car_data.append(df_19.loc[:, 'Грузовые автомобили легкие'].to_numpy())
+    car_data.append(df_19.loc[:, 'Грузовые автомобили средние'].to_numpy() - df_19.loc[:, 4].to_numpy())
+    car_data.append(-df_19.loc[:, 'Грузовые автомобили тяжелые'].to_numpy() + df_19.loc[:, 6].to_numpy())
+    car_data.append(df_19.loc[:, 'Грузовые автомобили сверхтяжелые'] - df_19.loc[:, 8].to_numpy())
+    car_data.append(df_19.loc[:, 'Автобусы'].to_numpy())
+    car_data.append(df_19.loc[:, 4].to_numpy() + df_19.loc[:, 8].to_numpy() + df_19.loc[:, 'Грузовые автомобили тяжелые'].to_numpy())
+    car_data_array = np.array(car_data)
+    car_N_j = df_19.loc[:, 11] - df_19.loc[:, 10]
+    P = np.array(0, 0, 0, 0, 0, 0)
+    aplha_prod_P = np.zeros(len(P[0]))
+    for i in range(6):
+        P[i] = np.divide(car_data_array[i], car_N_j)
+    for i in range(len(P[0])):
+        aplha_prod_P[i] = np.sum(P[:, i], alph)
+    return aplha_prod_P, car_N_j
 
 
 def get_gamma(roadbed_type):
@@ -59,9 +99,11 @@ def get_T_0_K_H(roadbed_type, road_category, road_climatic_zone):
     return T_0es[road_climatic_zone][road_category][roadbed_type], K_Hes[road_climatic_zone][road_category][
         roadbed_type]
 
+
 def get_K_cu(roadbed_type, road_climatic_zone):
     keys = ((1.54, 1.42, 1.35), (1.38, 1.34, 1.28), (1.0, 1.0, 1.0))
     return keys[roadbed_type][road_climatic_zone]
+
 
 def get_K_pr(road_category, roadbed_type):
     if roadbed_type == 1:
@@ -90,30 +132,29 @@ def get_f_n(strip_count):
         r = 0.55
     elif strip_count == 3:
         r = 0.5
-    elif strip_count == 4 or a == 5:
+    elif strip_count == 4 or strip_count == 5:
         r = 0.35
     return r
 
 
-def T_ost(q, X, gamma, omega, N_fp):
+def get_T_ost(q, X, gamma, omega, N_fp):
     return 1 / (np.log10(q)) * np.log10(10 ** X * (q - 1) / (gamma * omega * N_fp * q) + 1)
 
 
+def get_X_i(K_H):
+    0.96 / (1 - K_H) ** 0.128
 
-def X_i(K_H):
-    0.96/(1 - K_H)**0.128
 
-
-def X(E_i):
+def get_X(E_i):
     return (E_i - 125) / 68 - 1
 
 
-def E_i(E_fp, X_i, K_pr, K_reg, K_z, K_cu):
+def get_E_i(E_fp, X_i, K_pr, K_reg, K_z, K_cu):
     return (E_fp * X_i) / (K_pr * K_reg * K_z * K_cu)
 
 
 # T_ф_ост
-def Formula_1_01(T_ost, delta_t):
+def get_remaining_time(T_ost, delta_t):
     return T_ost - delta_t
 
 
@@ -130,8 +171,8 @@ def get_N(N_fp, q, delta_t):
     return N_fp * q ** delta_t
 
 
-def get_N_fp(N_obsh_n, strip_count, alpha, P):
-    return N_obsh_n * get_f_n(strip_count) * np.sum(alpha * P)
+def get_N_fp(N_obsh_n, strip_count, alpha_pr_P):
+    return N_obsh_n * get_f_n(strip_count) * alpha_pr_P
 
 
 # Ебейшая формула из большой таблицы
@@ -151,27 +192,22 @@ def Giga_Formula(T_ost, delta_t, K_pr, K_reg, K_z, K_cu, X_i, gamma, omega, N_fp
     return E_f, E_tr
 
 
-def calculate_T_ost(q, roadbed_type, road_category, road_climatic_zone, strip_count, spreadsheet_19, alpha, delta_t):
+
+def calculate_T_ost(roadbed_type, road_category, road_climatic_zone, strip_count, alpha_product_P, delta_t, E_fp, N_obsh):
+    K_H = get_T_0_K_H(roadbed_type, road_category, road_climatic_zone)[1]
+    q = 1.05
     omega = get_omega(roadbed_type, road_climatic_zone)
     gamma = get_gamma(roadbed_type)
-    N_j = get_N_j(spreadsheet_19)
-    N_obsh = get_N_obsh(spreadsheet_19)
-    P = N_j/N_obsh
-    N_fp = get_N_fp(N_obsh, strip_count, alpha, P)
+    N_fp = get_N_fp(N_obsh, strip_count, alpha_product_P)
     N = get_N(N_fp, q, delta_t)
     K_pr = get_K_pr(road_category, roadbed_type)
-    K_Cu = get_K_cu(roadbed_type, road_climatic_zone)
+    K_cu = get_K_cu(roadbed_type, road_climatic_zone)
     K_reg = get_K_reg(road_climatic_zone)
     K_z = get_K_z(N)
+    X_i = get_X_i(K_H)
+    E_i = get_E_i(E_fp, X_i, K_pr, K_reg, K_z, K_cu)
+    X = get_X(E_i)
+    T_ost = get_T_ost(q, X, gamma, omega, N_fp)
+    result = get_remaining_time(T_ost, delta_t)
 
-    result = T_ost(q, X, gamma, omega, N_fp)
 
-
-#
-#
-#
-#
-#X_i
-#E_i
-#X
-#T_ost
