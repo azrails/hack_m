@@ -1,4 +1,4 @@
-import parser
+import pars
 import os, os.path
 import tkinter as tk
 from tkinter import filedialog as fd
@@ -33,7 +33,7 @@ class MainApp(tk.Tk):
     def chose_directory(self):
         directoryname = fd.askdirectory()
         try:
-            self.dtatasets = parser.main_parser(directoryname)
+            self.dtatasets = pars.main_parser(directoryname)
         except:
             pass
 
