@@ -73,33 +73,50 @@ def get_alpha_prod_P(df_19, alph):
 
 
 def get_gamma(roadbed_type):
-    if roadbed_type == 1:
+    if roadbed_type <= 1:
         return 0.12
     elif roadbed_type == 2:
         return 0.148
-    elif roadbed_type == 3:
+    elif roadbed_type >= 3:
         return 0.171
-    else:
-        print("error at formulas.get_gamma")
 
 
 def get_omega(roadbed_type, road_climatic_zone):
+    if road_climatic_zone < 3:
+        road_climatic_zone = 0
+    elif road_climatic_zone > 3:
+        road_climatic_zone = 2
+    else:
+        road_climatic_zone = 1
     omegas = ((1.3, 1.39, 1.00), (1.14, 1.17, 1.00), (1.00, 1.00, 1.00), (0.89, 0.86, 1.00), (0.79, 0.74, 1.00))
     return omegas[road_climatic_zone][roadbed_type]
 
 
 def get_T_0_K_H(roadbed_type, road_category, road_climatic_zone):
+    if road_climatic_zone < 3:
+        road_climatic_zone = 0
+    elif road_climatic_zone > 3:
+        road_climatic_zone = 2
+    else:
+        road_climatic_zone = 1
     T_0es = (((12, 12, 5), (12, 12, 5), (12, 12, 5), (12, 10, 5), (12, 10, 5)),
              ((14, 12, 5), (12, 12, 5), (12, 12, 5), (12, 10, 5), (12, 10, 5)),
              ((18, 12, 5), (15, 12, 5), (15, 12, 5), (12, 12, 5), (12, 12, 5)))
     K_Hes = (((0.98, 0.86, 0.82), (0.95, 0.86, 0.82), (0.92, 0.86, 0.82), (0.85, 0.85, 0.82), (0.85, 0.82, 0.65)),
              ((0.95, 0.85, 0.80), (0.92, 0.85, 0.80), (0.90, 0.85, 0.80), (0.84, 0.84, 0.80), (0.84, 0.80, 0.60)),
              ((0.88, 0.84, 0.77), (0.88, 0.84, 0.77), (0.85, 0.84, 0.77), (0.83, 0.82, 0.77), (0.83, 0.79, 0.58)))
-    return T_0es[road_climatic_zone][road_category][roadbed_type], K_Hes[road_climatic_zone, road_category][
+    print(type(road_climatic_zone), type(road_category), type(roadbed_type))
+    return T_0es[road_climatic_zone][road_category][roadbed_type], K_Hes[road_climatic_zone][road_category][
         roadbed_type]
 
 
 def get_K_cu(roadbed_type, road_climatic_zone):
+    if road_climatic_zone < 3:
+        road_climatic_zone = 0
+    elif road_climatic_zone > 3:
+        road_climatic_zone = 2
+    else:
+        road_climatic_zone = 1
     keys = ((1.54, 1.42, 1.35), (1.38, 1.34, 1.28), (1.0, 1.0, 1.0))
     return keys[roadbed_type][road_climatic_zone]
 
@@ -193,20 +210,28 @@ def Giga_Formula(T_ost, delta_t, K_pr, K_reg, K_z, K_cu, X_i, gamma, omega, N_fp
 
 def calculate_T_ost(roadbed_type, road_category, road_climatic_zone, strip_count, alpha_product_P, t1, t2, E_fp,
                     N_obsh):
-    delta_t = t1 - t2
-    K_H = get_T_0_K_H(roadbed_type, road_category, road_climatic_zone)[1]
-    q = 1.05
-    omega = get_omega(roadbed_type, road_climatic_zone)
-    gamma = get_gamma(roadbed_type)
-    N_fp = get_N_fp(N_obsh, strip_count, alpha_product_P)
-    N = get_N(N_fp, q, delta_t)
-    K_pr = get_K_pr(road_category, roadbed_type)
-    K_cu = get_K_cu(roadbed_type, road_climatic_zone)
-    K_reg = get_K_reg(road_climatic_zone)
-    K_z = get_K_z(N)
-    X_i = get_X_i(K_H)
-    E_i = get_E_i(E_fp, X_i, K_pr, K_reg, K_z, K_cu)
-    X = get_X(E_i)
-    T_ost = get_T_ost(q, X, gamma, omega, N_fp)
-    result = get_remaining_time(T_ost, delta_t)
-    print(result)
+    for i in range(len(roadbed_type)):
+        rbt = int(roadbed_type[i])
+        rc = int(road_category[i])
+        rcz = int(road_climatic_zone[i])
+        sc = int(strip_count[i])
+        nobsh = int(N_obsh[i])
+        app = alpha_product_P[i]
+        efp = E_fp[i]
+        delta_t = t1 - t2
+        K_H = get_T_0_K_H(rbt, rc - 1, rcz - 1)[1]
+        q = 1.05
+        omega = get_omega(rbt-1, rcz)
+        gamma = get_gamma(rbt-1)
+        N_fp = get_N_fp(nobsh, sc, app)
+        N = get_N(N_fp, q, delta_t)
+        K_pr = get_K_pr(rc, rbt)
+        K_cu = get_K_cu(rbt, rcz)
+        K_reg = get_K_reg(rcz)
+        K_z = get_K_z(N)
+        X_i = get_X_i(K_H)
+        E_i = get_E_i(efp, X_i, K_pr, K_reg, K_z, K_cu)
+        X = get_X(E_i)
+        T_ost = get_T_ost(q, X, gamma, omega, N_fp)
+        result = get_remaining_time(T_ost, delta_t)
+        print(result)
