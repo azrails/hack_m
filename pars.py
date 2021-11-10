@@ -20,7 +20,7 @@ def main_parser(directoryname: str)->'dict[pd.dataframe]':
     
 
 def road_parserType1(road):
-    road += r"/1_Ведомость категории дорог.xlsx"
+    road += r"/1_Ведомость категории дорог и числа полос движения.xlsx"
     df = pd.read_excel(r'{}'.format(road))
     return df
 
@@ -31,7 +31,7 @@ def road_parserType2(road):
     return df
 
 def road_parserType3(road):
-    road += r"/5_Ведомость дорожно-климат районирования.xlsx"
+    road += r"/5_Ведомость дорожно-климатического районирования.xlsx"
 
     df = pd.read_excel(r'{}'.format(road))
     return df
@@ -39,7 +39,7 @@ def road_parserType3(road):
 def road_parserType4(road):
     road += r"/9_Ведомость общих данных по дороге.xlsx"
 
-    df = pd.read_excel(r'{}'.format(road))
+    df = pd.read_excel(r'{}'.format(road), sheet_name="Лист3")
     return df
 
 def road_parserType5(road):
@@ -55,7 +55,7 @@ def road_parserType6(road):
     return df
 
 def road_parserType7(road):
-    road += r"/Ведомость_ состояния покрытия и дорожной одежды.xlsx"
+    road += r"/Ведомость_ состояния и покрытия дорожной одежды.xlsx"
 
     df = pd.read_excel(r'{}'.format(road))
     return df

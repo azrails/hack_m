@@ -1,10 +1,7 @@
 import numpy as np
 import pandas as pd
-import parser as par
+import pars as par
 import datetime
-
-alpha = np.array([0.005, 0.2, 0.7, 1.25, 0.7, 1.5])
-q = 1.05
 
 
 def segmenter(segs, lens, points, data, write):
@@ -13,41 +10,42 @@ def segmenter(segs, lens, points, data, write):
         if points[counts] - segs[i] <= lens[i]:
             write[i] = data[counts]
         else:
-            counts += 1
+            if counts < len(data)-1:
+                counts += 1
             write[i] = data[counts]
+
 
 def get_data(df1, df2, df5, df9, df11, df19, df_not_numbered):
     alpha = np.array([0.005, 0.2, 0.7, 1.25, 0.7, 1.5])
-    _t_p = int(df9.iloc[0, 9])
+    _t_p = int(df9.iloc[1, 9])
     _t_f = int(datetime.datetime.now().year)
-    lens = np.array(len(df1), len(df2), len(df5), len(df9), len(df11), len(df19), len(df_not_numbered))
+    lens = np.array([len(df1), len(df2), len(df5), len(df9), len(df11), len(df19), len(df_not_numbered)])
     names = ("df1", "df2", "df5", "df9", "df11", "df19", "df_not_numbered")
-    string1 = names[np.argmax(lens)] + ".iloc[:, 0:3].to_numpy()"
+    string1 = names[np.argmax(lens)] + ".iloc[1:, 0:4].to_numpy()"
     segments_with_meters = eval(string1)
     # в segments хранятся 0 - начало участка в км 1 - длина в км 2 - road category 3 - strip_count
     # 4 - climatic zore 5 - roadbed 6 - E_fp 7 -  alpha_prod_P 8 - N_obsh
-    # FIXME какой индекс в np.shape дает количество строк в таблице
-    segments = np.zeros((np.shape(segments_with_meters)[kakoyto], 8))
-    segments[0] = segments_with_meters[0]+segments_with_meters[1]*0.001
-    segments[1] = -segments[0] + segments_with_meters[2]+segments_with_meters[3]*0.001-segments[0]
+    segments = np.zeros((9, np.shape(segments_with_meters)[0]))
+    segments[0] = segments_with_meters[:, 0] + segments_with_meters[:, 1] * 0.001
+    segments[1] = segments_with_meters[:, 2] + segments_with_meters[:, 3] * 0.001 - segments[0]
 
-    category = df1.iloc[:, 4].to_numpy()
-    strips = df1.iloc[:, 6].to_numpy()
-    df1_points = df1.iloc[:, 0].to_numpy() + df1.iloc[:, 1].to_numpy()*0.001
+    category = df1.iloc[1:, 4].to_numpy()
+    strips = df1.iloc[1:, 6].to_numpy()
+    df1_points = df1.iloc[1:, 0].to_numpy() + df1.iloc[1:, 1].to_numpy() * 0.001
     segmenter(segments[0], segments[1], df1_points, category, segments[2])
     segmenter(segments[0], segments[1], df1_points, strips, segments[3])
 
-    climatic_zone = df5.iloc[:, 4].to_numpy()
-    df5_points = df5.iloc[:, 0].to_numpy() + df5.iloc[:, 1].to_numpy() * 0.001
+    climatic_zone = df5.iloc[1:, 4].to_numpy()
+    df5_points = df5.iloc[1:, 0].to_numpy() + df5.iloc[1:, 1].to_numpy() * 0.001
     segmenter(segments[0], segments[1], df5_points, climatic_zone, segments[4])
 
-    roadbed = df_not_numbered.iloc[:, 4].to_numpy()
-    E_modula = df_not_numbered.iloc[:, 6].to_numpy()
-    df_not_numbered_points = df_not_numbered.iloc[:, 0].to_numpy() + df_not_numbered.iloc[:, 1].to_numpy()*0.001
+    roadbed = df_not_numbered.iloc[1:, 4].to_numpy()
+    E_modula = df_not_numbered.iloc[1:, 6].to_numpy()
+    df_not_numbered_points = df_not_numbered.iloc[1:, 0].to_numpy() + df_not_numbered.iloc[1:, 1].to_numpy() * 0.001
     segmenter(segments[0], segments[1], df_not_numbered_points, roadbed, segments[5])
     segmenter(segments[0], segments[1], df_not_numbered_points, E_modula, segments[6])
 
-    df19_points = df19.iloc[:, 0].to_numpy() + df19.iloc[:, 1].to_numpy() * 0.001
+    df19_points = df19.iloc[1:, 0].to_numpy() + df19.iloc[1:, 1].to_numpy() * 0.001
     A_P_P, obsh = get_alpha_prod_P(df19, alpha)
     segmenter(segments[0], segments[1], df19_points, A_P_P, segments[7])
     segmenter(segments[0], segments[1], df19_points, obsh, segments[8])
@@ -56,20 +54,21 @@ def get_data(df1, df2, df5, df9, df11, df19, df_not_numbered):
 
 def get_alpha_prod_P(df_19, alph):
     car_data = []
-    car_data.append(df_19.loc[:, 'Грузовые автомобили легкие'].to_numpy())
-    car_data.append(df_19.loc[:, 'Грузовые автомобили средние'].to_numpy() - df_19.loc[:, 4].to_numpy())
-    car_data.append(-df_19.loc[:, 'Грузовые автомобили тяжелые'].to_numpy() + df_19.loc[:, 6].to_numpy())
-    car_data.append(df_19.loc[:, 'Грузовые автомобили сверхтяжелые'] - df_19.loc[:, 8].to_numpy())
-    car_data.append(df_19.loc[:, 'Автобусы'].to_numpy())
-    car_data.append(df_19.loc[:, 4].to_numpy() + df_19.loc[:, 8].to_numpy() + df_19.loc[:, 'Грузовые автомобили тяжелые'].to_numpy())
+    car_data.append(df_19.iloc[1:, 2].to_numpy())
+    car_data.append(df_19.iloc[1:, 3].to_numpy() - df_19.iloc[1:, 4].to_numpy())
+    car_data.append(-df_19.iloc[1:, 5].to_numpy() + df_19.iloc[1:, 6].to_numpy())
+    car_data.append(df_19.iloc[1:, 7] - df_19.iloc[1:, 8].to_numpy())
+    car_data.append(df_19.iloc[1:, 10].to_numpy())
+    car_data.append(df_19.iloc[1:, 4].to_numpy() + df_19.iloc[1:, 8].to_numpy() + df_19.iloc[1:,
+                                                                                5].to_numpy())
     car_data_array = np.array(car_data)
-    car_N_j = df_19.loc[:, 11] - df_19.loc[:, 10]
-    P = np.array(0, 0, 0, 0, 0, 0)
-    aplha_prod_P = np.zeros(len(P[0]))
+    car_N_j = df_19.iloc[1:, 11].to_numpy() - df_19.iloc[1:, 9].to_numpy()
+    P = np.zeros((6, len(car_data_array[0])))
+    aplha_prod_P = np.zeros(len(car_data_array[0]))
     for i in range(6):
         P[i] = np.divide(car_data_array[i], car_N_j)
     for i in range(len(P[0])):
-        aplha_prod_P[i] = np.sum(P[:, i], alph)
+        aplha_prod_P[i] = np.sum(np.multiply(P[:, i], alph))
     return aplha_prod_P, car_N_j
 
 
@@ -96,7 +95,7 @@ def get_T_0_K_H(roadbed_type, road_category, road_climatic_zone):
     K_Hes = (((0.98, 0.86, 0.82), (0.95, 0.86, 0.82), (0.92, 0.86, 0.82), (0.85, 0.85, 0.82), (0.85, 0.82, 0.65)),
              ((0.95, 0.85, 0.80), (0.92, 0.85, 0.80), (0.90, 0.85, 0.80), (0.84, 0.84, 0.80), (0.84, 0.80, 0.60)),
              ((0.88, 0.84, 0.77), (0.88, 0.84, 0.77), (0.85, 0.84, 0.77), (0.83, 0.82, 0.77), (0.83, 0.79, 0.58)))
-    return T_0es[road_climatic_zone][road_category][roadbed_type], K_Hes[road_climatic_zone][road_category][
+    return T_0es[road_climatic_zone][road_category][roadbed_type], K_Hes[road_climatic_zone, road_category][
         roadbed_type]
 
 
@@ -192,8 +191,9 @@ def Giga_Formula(T_ost, delta_t, K_pr, K_reg, K_z, K_cu, X_i, gamma, omega, N_fp
     return E_f, E_tr
 
 
-
-def calculate_T_ost(roadbed_type, road_category, road_climatic_zone, strip_count, alpha_product_P, delta_t, E_fp, N_obsh):
+def calculate_T_ost(roadbed_type, road_category, road_climatic_zone, strip_count, alpha_product_P, t1, t2, E_fp,
+                    N_obsh):
+    delta_t = t1 - t2
     K_H = get_T_0_K_H(roadbed_type, road_category, road_climatic_zone)[1]
     q = 1.05
     omega = get_omega(roadbed_type, road_climatic_zone)
@@ -209,5 +209,4 @@ def calculate_T_ost(roadbed_type, road_category, road_climatic_zone, strip_count
     X = get_X(E_i)
     T_ost = get_T_ost(q, X, gamma, omega, N_fp)
     result = get_remaining_time(T_ost, delta_t)
-
-
+    print(result)
